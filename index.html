@@ -88,6 +88,7 @@
       init() {
         this.loadLog();
         this.units = {}; // Track selected units per exercise
+        this.editingIdx = {}; // Track which entries are being edited
         this.render();
       },
       
@@ -438,12 +439,25 @@
         if (sets.length === 0) return;
         
         const notes = document.getElementById(`notes-${key}`)?.value || '';
-        const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const unit = this.units[key] || 'kg';
         
         if (!this.log[key]) this.log[key] = [];
-        this.log[key].unshift({ date, sets, notes, unit });
-        this.log[key] = this.log[key].slice(0, 5);
+        
+        if (this.editingIdx[key] !== undefined) {
+          // Update existing entry
+          this.log[key][this.editingIdx[key]] = { 
+            date: this.log[key][this.editingIdx[key]].date, 
+            sets, 
+            notes, 
+            unit 
+          };
+          delete this.editingIdx[key];
+        } else {
+          // Create new entry
+          const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+          this.log[key].unshift({ date, sets, notes, unit });
+          this.log[key] = this.log[key].slice(0, 5);
+        }
         
         this.saveLog();
         alert('Saved!');
@@ -464,26 +478,22 @@
         
         const session = this.log[key][historyIdx];
         
-        // Set the unit
+        // Set the unit and mark as editing
         this.units[key] = session.unit || 'kg';
+        this.editingIdx[key] = historyIdx;
         
-        // Move to top
-        const edited = this.log[key].splice(historyIdx, 1)[0];
-        this.log[key].unshift(edited);
-        
-        this.saveLog();
         this.render();
         
         // Fill in the form after render
         setTimeout(() => {
-          for (let i = 0; i < edited.sets.length; i++) {
+          for (let i = 0; i < session.sets.length; i++) {
             const wEl = document.getElementById(`weight-${key}-${i}`);
             const rEl = document.getElementById(`reps-${key}-${i}`);
-            if (wEl) wEl.value = edited.sets[i].weight || '';
-            if (rEl) rEl.value = edited.sets[i].reps || '';
+            if (wEl) wEl.value = session.sets[i].weight || '';
+            if (rEl) rEl.value = session.sets[i].reps || '';
           }
           const notesEl = document.getElementById(`notes-${key}`);
-          if (notesEl) notesEl.value = edited.notes || '';
+          if (notesEl) notesEl.value = session.notes || '';
         }, 50);
       }
     };
