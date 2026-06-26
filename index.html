@@ -4,550 +4,436 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gym Tracker</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fafafa; font-family: system-ui, sans-serif; padding: 16px; }
+    #root { max-width: 600px; margin: 0 auto; }
+    
+    .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .btn-group { display: flex; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; }
+    .btn-group button { flex: 1; padding: 8px; border: none; cursor: pointer; font-size: 14px; background: transparent; }
+    .btn-group button.active { background: #EEEDFE; color: #534AB7; font-weight: 600; }
+    
+    .day-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .day-buttons button { padding: 7px 16px; border: 1px solid #e0e0e0; border-radius: 10px; background: transparent; cursor: pointer; font-size: 13px; }
+    .day-buttons button.active { background: #f0f0f0; color: #111; border-color: #bbb; font-weight: 600; }
+    
+    .card { background: white; border: 1px solid #e8e8e8; border-radius: 14px; overflow: hidden; margin-top: 14px; }
+    .card-header { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; font-size: 17px; font-weight: 700; color: #111; }
+    .card-subheader { padding: 11px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; line-height: 1.5; color: #444; background: #E5E2D9; }
+    
+    .section-header { padding: 7px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #5F5E5A; background: #F1EFE8; border-top: 1px solid #ece9e0; border-bottom: 1px solid #ece9e0; }
+    
+    .exercise { padding: 13px 16px; border-bottom: 1px solid #f5f5f5; }
+    .exercise-name { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 7px; }
+    .exercise-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .pill-muscle { background: #EAF3DE; color: #3B6D11; }
+    .pill-eq { background: #EEEBE6; color: #6B6560; }
+    .pill-rest { background: #E6F1FB; color: #185FA5; border: none; cursor: pointer; font-family: inherit; }
+    
+    .actions { display: flex; gap: 14px; margin-top: 10px; }
+    .action-btn { font-size: 13px; color: #4a7fcb; background: none; border: none; cursor: pointer; padding: 0; font-weight: 500; }
+    
+    .guide, .log { display: none; margin-top: 12px; }
+    .guide.show, .log.show { display: block; }
+    
+    .guide { background: #f9f9f9; border-radius: 10px; padding: 11px 13px; }
+    .guide-step { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; color: #555; line-height: 1.5; }
+    .guide-step:last-child { margin-bottom: 0; }
+    
+    .set-inputs { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+    input { padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 10px; background: #fafafa; color: #111; text-align: center; font-size: 14px; }
+    textarea { width: 100%; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 10px; background: #fafafa; color: #111; font-family: inherit; font-size: 13px; min-height: 60px; margin-top: 10px; }
+    
+    .save-btn { background: #EEEDFE; color: #534AB7; border: none; margin-top: 10px; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    
+    .history { margin-top: 14px; }
+    .history-title { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 7px; }
+    .history-entry { margin-bottom: 8px; padding: 9px 11px; background: #f9f9f9; border-radius: 10px; border: 1px solid #eee; font-size: 12px; }
+    .history-date { font-weight: 700; color: #555; margin-bottom: 5px; }
+    
+    .warmup-btn { width: 100%; padding: 11px 16px; display: flex; justify-content: space-between; align-items: center; background: #FFF8F0; border: none; cursor: pointer; }
+    .warmup-btn span:first-child { font-size: 14px; font-weight: 700; color: #A0522D; }
+    .warmup-item { padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+    .warmup-item:last-child { border-bottom: none; }
+    .warmup-name { font-size: 14px; font-weight: 600; color: #111; }
+    .warmup-duration { font-size: 11px; color: #A0522D; background: #FFF8F0; padding: 2px 8px; border-radius: 20; white-space: nowrap; font-weight: 500; }
+    .warmup-cue { font-size: 12px; color: #777; line-height: 1.5; margin-top: 4px; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-
-    const WARMUPS = [
-      {label:"Mon",exercises:[
-        {name:"Arm circles",duration:"30 s each direction",cue:"Big slow circles, gradually increase range. Loosens shoulder capsule."},
-        {name:"Chest opener",duration:"30 s",cue:"Arms wide, squeeze shoulder blades together. Opens the chest and front delts."},
-        {name:"Wall shoulder slides (YTWL)",duration:"45 s",cue:"Back flat on wall, slide arms up and down. Activates rotator cuff before pressing."},
-        {name:"Push-up to downward dog",duration:"45 s",cue:"Flow between a push-up and a pike stretch. Wakes up chest, triceps, and shoulders."},
-        {name:"Wrist circles + flexor stretch",duration:"30 s",cue:"Essential before any pressing. Rotate slowly both ways, then hold a gentle stretch."},
-      ]},
-      {label:"Tue",exercises:[
-        {name:"Hip circles",duration:"30 s each direction",cue:"Hands on hips, big slow circles. Lubricates the hip joint before squatting."},
-        {name:"Bodyweight squat to pause",duration:"45 s",cue:"Squat slowly, pause 2s at the bottom. Warms up quads, glutes, and ankles."},
-        {name:"Leg swings (front-back)",duration:"20 reps each leg",cue:"Hold a wall, swing straight leg. Mobilises the hip flexor and hamstring."},
-        {name:"Lateral leg swings",duration:"20 reps each leg",cue:"Swing leg side to side. Opens up the inner thigh and hip abductors."},
-        {name:"Ankle circles + calf raise",duration:"30 s",cue:"Rotate ankles slowly, then 10 slow calf raises. Prepares ankles for loaded squats."},
-      ]},
-      {label:"Wed",exercises:[
-        {name:"Cat-cow",duration:"45 s",cue:"On all fours, arch and round your spine slowly. Mobilises the thoracic spine — key for rows."},
-        {name:"Band pull-apart",duration:"30 s",cue:"Arms extended, pull hands apart squeezing rear delts. Direct warm-up for pulling muscles."},
-        {name:"Scapular retractions",duration:"20 reps",cue:"Arms at sides, squeeze and release shoulder blades. Activates the mid-back before pulling."},
-        {name:"Bicep stretch on rack",duration:"30 s each arm",cue:"Extend arm back on a rack, gentle stretch. Preps the bicep tendon for heavy pulling."},
-        {name:"Overhead lat stretch",duration:"30 s each side",cue:"Reach one arm overhead and lean. Stretches the lat through full ROM before pulldowns."},
-      ]},
-      {label:"Thu",exercises:[
-        {name:"Glute bridge hold",duration:"3 × 10 s hold",cue:"Feet flat, drive hips up and squeeze hard at the top. Fires up glutes before heavier work."},
-        {name:"Hip flexor lunge stretch",duration:"30 s each side",cue:"Low lunge, back knee down. Opens the hip flexor — crucial for hip thrust range."},
-        {name:"Leg swings (front-back)",duration:"20 reps each leg",cue:"Big pendulum swings. Warms hamstrings and primes the hip hinge pattern."},
-        {name:"Hip hinge drill (no weight)",duration:"10 reps",cue:"Hands on thighs, hinge back feeling the hamstring stretch. Practise before loading it."},
-        {name:"Clamshells",duration:"20 reps each side",cue:"Activates the glute medius — stabilises your hips throughout the whole session."},
-      ]},
-      {label:"Fri",exercises:[
-        {name:"Jumping jacks",duration:"45 s",cue:"Elevates heart rate immediately. This is your cardio day — start warm."},
-        {name:"Bodyweight squat to press",duration:"30 s",cue:"Squat, then drive arms overhead as you stand. Mimics the thruster pattern loaded."},
-        {name:"Inchworm",duration:"6 reps",cue:"Walk hands out to a plank and back. Mobilises the whole posterior chain and shoulders."},
-        {name:"Hip circles + torso rotation",duration:"30 s",cue:"Rotate hips and then torso in big circles. Preps the core for rotational work."},
-        {name:"High knees",duration:"30 s",cue:"Keep it brisk. You want to feel slightly warm before the first set."},
-      ]},
-    ];
-
-    const DAYS = [
-      {label:"Mon",title:"Upper body — push",tip:"Stay in equipment area, then one quick move to open room for the finisher. Rest 60s on compounds, 45s on isolation.",
-        A:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Bench press machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Chest, front delts, triceps",eq:"Machine",guide:["Adjust seat so handles align with mid-chest.","Press forward until arms extended but not locked out.","Control the return — don't let the weight stack slam."]},
-            {name:"Incline bench press machine",sets:"3 × 12",rest:"60 s",restSecs:60,muscles:"Upper chest, front delts, triceps",eq:"Machine",guide:["Adjust seat so handles align with upper chest.","Press up and slightly forward, squeeze at the top.","Lower slowly, feeling the stretch in upper chest."]},
-            {name:"Seated chest fly machine",sets:"3 × 12",rest:"45 s",restSecs:45,muscles:"Chest, front delts",eq:"Machine",guide:["Adjust seat so handles are at chest height.","Bring handles together in front of chest, squeezing hard.","Open slowly, controlling the stretch."]},
-            {name:"Cable tricep pushdown",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Triceps",eq:"Cable",guide:["High pulley, straight or rope attachment. Elbows pinned to sides.","Push down until arms extended, squeeze triceps.","Control the return — don't let elbows flare."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Dumbbell lateral raise",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Side delts",eq:"DB",guide:["Slight forward lean, soft knees.","Raise arms to shoulder height, leading with elbows.","Lower slowly. Go lighter than you think."]},
-            {name:"Dumbbell overhead press",sets:"3 × 12",rest:"60 s",restSecs:60,muscles:"Shoulders, triceps, upper traps",eq:"DB",guide:["Seated or standing. DBs at shoulder height.","Press up, bringing DBs slightly together at top.","Core braced — don't arch lower back."]},
-          ]},
-        ]},
-        B:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Incline bench press machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Upper chest, front delts, triceps",eq:"Machine",guide:["Adjust seat so handles align with upper chest.","Press up and slightly forward, squeeze at the top.","Lower slowly, feeling the stretch in upper chest."]},
-            {name:"Bench press machine",sets:"3 × 12",rest:"60 s",restSecs:60,muscles:"Chest, front delts, triceps",eq:"Machine",guide:["Adjust seat so handles align with mid-chest.","Press forward until arms extended but not locked out.","Control the return — don't let the weight stack slam."]},
-            {name:"Seated chest fly machine",sets:"3 × 12",rest:"45 s",restSecs:45,muscles:"Chest, front delts",eq:"Machine",guide:["Same as Week A — focus on a slow eccentric this week.","Bring handles together in front of chest, squeezing hard.","Open slowly over 3 seconds, controlling the stretch."]},
-            {name:"Cable overhead tricep extension",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Triceps (long head)",eq:"Cable",guide:["Low pulley, rope attachment. Face away, rope overhead.","Extend arms forward and up, squeezing triceps.","Keep upper arms still — only the forearms move."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Dumbbell front raise",sets:"3 × 12",rest:"45 s",restSecs:45,muscles:"Front delts",eq:"DB",guide:["Alternate arms, raising to shoulder height.","Slight elbow bend. Don't swing.","Lower slowly — the eccentric phase matters."]},
-            {name:"Dumbbell Arnold press",sets:"3 × 12",rest:"60 s",restSecs:60,muscles:"Shoulders (all heads), triceps",eq:"DB",guide:["Start with DBs at chin, palms facing you.","Rotate palms outward as you press up.","Reverse rotation on the way down. Go slowly."]},
-          ]},
-        ]},
-      },
-      {label:"Tue",title:"Lower body — quad focus",tip:"Start at the squat rack, finish quads on machines. One quick move to open room for curtsy lunges.",
-        A:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Barbell back squat",sets:"4 × 10",rest:"90 s",restSecs:90,muscles:"Quads, glutes, hamstrings, core",eq:"Squat rack",guide:["Bar on upper traps, feet shoulder-width, toes slightly out.","Brace core, squat until thighs parallel to floor.","Drive through heels to stand. Chest up, knees track over toes."]},
-            {name:"Leg press",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Quads, glutes, hamstrings",eq:"Machine",guide:["Feet shoulder-width, mid-plate. Lower until knees ~90°.","Don't let lower back peel off the pad.","Don't lock out knees at top. Keep tension throughout."]},
-            {name:"Leg extension machine",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Quads",eq:"Machine",guide:["Back flat against pad, pad resting on shins.","Extend legs until straight, squeeze quads hard.","Lower slowly — control the negative."]},
-            {name:"Calf raise machine",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Calves",eq:"Machine",guide:["Balls of feet on platform, full stretch at the bottom.","Push up onto toes, pause and squeeze at the top.","Lower slowly past parallel for a deep stretch."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Curtsy lunge",sets:"3 × 12/leg",rest:"60 s",restSecs:60,muscles:"Glutes, inner thighs, quads",eq:"DB",guide:["Hold DBs at sides. Step one leg diagonally behind you, crossing it behind the standing leg.","Lower back knee toward the floor, keeping front knee tracking over toes.","Drive through the front heel to return to standing. Keep torso upright throughout."]},
-          ]},
-        ]},
-        B:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Smith machine front squat",sets:"4 × 8",rest:"90 s",restSecs:90,muscles:"Quads (emphasis), core, upper back",eq:"Smith machine",guide:["Bar on front of shoulders, crossed arms or clean grip.","Stay very upright, squat deep, drive knees out.","Go lighter than you think — front squats are tough on the core."]},
-            {name:"Leg press — narrow stance",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Outer quads, glutes",eq:"Machine",guide:["Feet closer together, still mid-plate.","Narrower stance shifts emphasis to outer quad sweep.","Same rules as regular leg press."]},
-            {name:"Leg extension machine",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Quads",eq:"Machine",guide:["Same as Week A — this week, pause 2 seconds at the top of each rep.","Extend legs until straight, squeeze quads hard.","Lower slowly — control the negative."]},
-            {name:"Calf raise machine",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Calves",eq:"Machine",guide:["Same as Week A. Try a slightly wider foot stance for variation."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Curtsy lunge",sets:"3 × 12/leg",rest:"60 s",restSecs:60,muscles:"Glutes, inner thighs, quads",eq:"DB",guide:["Same as Week A. Try increasing weight slightly if comfortable."]},
-          ]},
-        ]},
-      },
-      {label:"Wed",title:"Upper body — pull",tip:"Stay in equipment area for cables, one move to open room for curls.",
-        A:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Lat pulldown (wide grip)",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Lats, biceps, rear delts",eq:"Cable",guide:["Wide overhand grip. Pull bar to upper chest, lead with elbows.","Lean back slightly.","Let bar rise fully — lats stretch at the top."]},
-            {name:"Seated cable row",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Mid-back, lats, biceps",eq:"Cable",guide:["Sit upright, neutral grip. Row to lower sternum, elbows hugging sides.","Squeeze shoulder blades at end.","Extend arms fully on return."]},
-            {name:"Single-arm cable row",sets:"3 × 12/side",rest:"45 s",restSecs:45,muscles:"Lats, mid-back, biceps",eq:"Cable",guide:["Mid-height cable. Row elbow back past your hip.","Let torso rotate slightly toward cable at bottom for greater ROM.","Control the return fully."]},
-            {name:"Cable face pull",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Rear delts, rotator cuff, upper traps",eq:"Cable",guide:["High pulley, rope attachment. Pull to face, hands splitting at ear level.","Elbows finish above shoulder height.","Go light — this is a shoulder health exercise."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Dumbbell bicep curl",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Biceps, forearms",eq:"DB",guide:["Alternate arms. Supinate wrist as you curl (rotate palm upward).","Full range — arm fully extended at start.","Lower slowly. No swinging."]},
-          ]},
-        ]},
-        B:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Lat pulldown (close grip)",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Lats (inner), biceps",eq:"Cable",guide:["Neutral/close grip handle. Pull to chin level.","Close grip hits inner/lower lat differently to wide grip.","Same rules: lead with elbows, full stretch at top."]},
-            {name:"Seated cable row — wide grip",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Upper back, rear delts, traps",eq:"Cable",guide:["Wide bar attachment. Row to lower chest. Elbows flare slightly.","Shifts work to upper back.","Squeeze hard at finish. Pause before releasing."]},
-            {name:"Cable straight-arm pulldown",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Lats",eq:"Cable",guide:["High pulley, straight bar. Stand back, arms extended above.","Pull bar down in an arc keeping arms straight to thighs.","Return slowly — the stretch is where lats grow."]},
-            {name:"Cable rear delt fly",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Rear delts, upper back",eq:"Cable",guide:["Two high cables, cross arms and grab opposite handle.","Pull outward and slightly down in a reverse fly motion.","Slight elbow bend. Squeeze rear delts at end."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Dumbbell hammer curl",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Biceps, brachialis, forearms",eq:"DB",guide:["Neutral grip (palms facing each other) throughout.","Curl both arms or alternate. Lower all the way down each rep.","Full extension matters."]},
-          ]},
-        ]},
-      },
-      {label:"Thu",title:"Lower body — glute & hamstring focus",tip:"Equipment area for hip thrust and leg curl, one move to open room for the finisher.",
-        A:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Hip thrust machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Glutes (primary), hamstrings",eq:"Machine",guide:["Adjust pad to sit comfortably across hips.","Drive hips up explosively, squeeze glutes hard at the top.","Lower with control — don't let the weight drop."]},
-            {name:"Leg curl machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Hamstrings",eq:"Machine",guide:["Lie face down or seated, pad against lower legs.","Curl legs up, squeezing hamstrings hard at the top.","Lower slowly — control the negative."]},
-            {name:"Cable kickback",sets:"3 × 15/leg",rest:"45 s",restSecs:45,muscles:"Glutes",eq:"Cable",guide:["Ankle attachment, low pulley. Hinge slightly forward, hold machine for support.","Kick attached leg straight back, squeezing glute hard at top.","Don't swing — small and controlled. Isolation, not momentum."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Kettlebell swing",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Glutes, hamstrings, core",eq:"Kettlebell",guide:["Hinge at hips, kettlebell swings between legs.","Drive hips forward explosively, swinging KB to chest height.","Let it swing back down naturally into the next rep — hips power the movement, not arms."]},
-          ]},
-        ]},
-        B:{floors:[
-          {name:"Equipment area",exercises:[
-            {name:"Hip thrust machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Glutes (primary), hamstrings",eq:"Machine",guide:["Same as Week A — pause 1 second at the top of each rep this week.","Drive hips up explosively, squeeze glutes hard at the top.","Lower with control — don't let the weight drop."]},
-            {name:"Leg curl machine",sets:"4 × 12",rest:"60 s",restSecs:60,muscles:"Hamstrings",eq:"Machine",guide:["Same as Week A — focus on a slow 3-second eccentric this week.","Curl legs up, squeezing hamstrings hard at the top.","Lower slowly — control the negative."]},
-            {name:"Cable kickback",sets:"3 × 15/leg",rest:"45 s",restSecs:45,muscles:"Glutes",eq:"Cable",guide:["Same as Week A. Try pausing briefly at full extension."]},
-          ]},
-          {name:"Open room",exercises:[
-            {name:"Dumbbell Bulgarian split squat",sets:"3 × 10/leg",rest:"75 s",restSecs:75,muscles:"Glutes, quads, hamstrings",eq:"DB + chair",guide:["Rear foot elevated on a chair, laces down. Hold DBs at sides.","Lower back knee toward floor. Lean forward slightly at hips.","Drive through front heel to stand. This will burn — that's good."]},
-            {name:"Dumbbell Romanian deadlift (single-leg)",sets:"3 × 12",rest:"60 s",restSecs:60,muscles:"Hamstrings, glutes",eq:"DB",guide:["Hold one DB, hinge on one leg while the other floats behind.","Keep hips square. Feel the hamstring of the standing leg stretch deeply.","Return to standing slowly. Use a wall or chair for balance if needed."]},
-          ]},
-        ]},
-      },
-      {label:"Fri",title:"Full body — metabolic",tip:"Start in open room for DB/KB work, one move to equipment for the finisher. Keep rest to 30–45s today.",
-        A:{floors:[
-          {name:"Open room",exercises:[
-            {name:"Dumbbell thrusters",sets:"4 × 15",rest:"45 s",restSecs:45,muscles:"Quads, glutes, shoulders, triceps",eq:"DB",guide:["Hold DBs at shoulder height. Squat down (full depth).","As you stand, press DBs overhead in one fluid motion. Power from the legs.","Lower DBs back to shoulders as you descend into next squat."]},
-            {name:"Kettlebell swing to squat",sets:"3 × 12",rest:"45 s",restSecs:45,muscles:"Full body — glutes, hamstrings, core",eq:"Kettlebell",guide:["Swing kettlebell up to chest height using hip drive.","As it descends, drop into a squat holding KB at chest.","Stand and repeat the swing for the next rep."]},
-            {name:"Dumbbell renegade row",sets:"3 × 10/side",rest:"45 s",restSecs:45,muscles:"Back, biceps, core (anti-rotation)",eq:"DB",guide:["Plank position, one hand on each DB. Feet wide for stability.","Row one DB to your hip while the other arm stays planted.","Don't rotate your hips — staying still is the core challenge."]},
-          ]},
-          {name:"Equipment area",exercises:[
-            {name:"Cable woodchop (high to low)",sets:"3 × 12/side",rest:"30 s",restSecs:30,muscles:"Obliques, core, shoulders",eq:"Cable",guide:["High pulley, single handle, stand side-on.","Pull handle diagonally across body from high to low, rotating through torso.","Arms relatively straight — rotation comes from core, not arms."]},
-            {name:"Leg press — light, fast",sets:"3 × 20",rest:"45 s",restSecs:45,muscles:"Quads, glutes",eq:"Machine",guide:["Light weight, 20 reps, explosive push, slow lower.","About 60% of your normal leg press weight.","Embrace the burn — this is a metabolic finisher."]},
-          ]},
-        ]},
-        B:{floors:[
-          {name:"Open room",exercises:[
-            {name:"Dumbbell clean and press",sets:"4 × 10",rest:"45 s",restSecs:45,muscles:"Full body — power movement",eq:"DB",guide:["Hold DBs at thighs. Explosively pull to shoulder height, then press overhead.","Two phases: the clean (to shoulders) and the press (overhead).","Lower with control — keep form clean as you fatigue."]},
-            {name:"Kettlebell swing",sets:"3 × 15",rest:"45 s",restSecs:45,muscles:"Glutes, hamstrings, core",eq:"Kettlebell",guide:["Hinge at hips, kettlebell swings between legs.","Drive hips forward explosively, swinging KB to chest height.","Let it swing back down naturally into the next rep."]},
-            {name:"Dumbbell step-up to press",sets:"3 × 10/leg",rest:"45 s",restSecs:45,muscles:"Quads, glutes, shoulders",eq:"DB + chair",guide:["One foot on a stable chair or step. Drive up through that heel.","At the top, press both DBs overhead.","Lower DBs as you step back down. Finish the press before stepping down."]},
-          ]},
-          {name:"Equipment area",exercises:[
-            {name:"Cable pallof press",sets:"3 × 12/side",rest:"30 s",restSecs:30,muscles:"Core (anti-rotation), obliques",eq:"Cable",guide:["Mid-height cable, single handle. Stand side-on, feet shoulder-width.","Press handle straight out — cable tries to pull you toward it. Resist that.","Hold for a beat fully extended, return to chest. Zero torso rotation."]},
-            {name:"Leg press — light, fast",sets:"3 × 20",rest:"45 s",restSecs:45,muscles:"Quads, glutes",eq:"Machine",guide:["Same as Week A. Try a slightly different foot position."]},
-          ]},
-        ]},
-      },
-    ];
-
-    const pillStyle = (bg, color) => ({
-      fontSize:11, padding:"4px 10px", borderRadius:8, background:bg,
-      color, fontWeight:500, whiteSpace:"nowrap", display:"inline-block", lineHeight:1.4
-    });
-
-    function parseSetCount(s){const m=s.match(/^(\d+)/);return m?parseInt(m[1]):3;}
-    function logKey(w,d,f,e){return`${w}_${d}_${f}_${e}`;}
-    function emptyRows(n){return Array.from({length:n},()=>({weight:"",reps:""}));}
-
-    function RestTimer({ seconds, onClose }) {
-      const [remaining, setRemaining] = useState(seconds);
-      const [running, setRunning] = useState(true);
-      const intervalRef = useRef(null);
-
-      useEffect(() => {
-        if (running && remaining > 0) {
-          intervalRef.current = setInterval(() => {
-            setRemaining(r => { 
-              if(r <= 1) {
-                clearInterval(intervalRef.current);
-                return 0;
-              } 
-              return r - 1; 
-            });
-          }, 1000);
-        }
-        return () => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-      }, [running, remaining]);
-
-      const done = remaining === 0;
-      const pct = remaining / seconds;
-      const r = 34, circ = 2 * Math.PI * r;
-
-      function restart(){ setRemaining(seconds); setRunning(true); }
-
-      return (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}
-          onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-          <div style={{background:"#fff",borderRadius:22,padding:"30px 36px",minWidth:240,textAlign:"center",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:18}}>
-              {done ? "✅ Rest complete!" : "Rest timer"}
-            </div>
-            <svg width={96} height={96} viewBox="0 0 96 96" style={{transform:"rotate(-90deg)"}}>
-              <circle cx={48} cy={48} r={r} fill="none" stroke="#f0f0f0" strokeWidth={7}/>
-              <circle cx={48} cy={48} r={r} fill="none"
-                stroke={done?"#0F6E56":"#534AB7"} strokeWidth={7}
-                strokeDasharray={circ} strokeDashoffset={circ*(1-pct)}
-                strokeLinecap="round"
-                style={{transition:"stroke-dashoffset 0.9s linear,stroke 0.3s"}}/>
-              <g transform="rotate(90 48 48)">
-                <text x={48} y={55} fill={done?"#0F6E56":"#111"} textAnchor="middle" dominantBaseline="middle"
-                  style={{fontSize:"32px",fontWeight:"700",fontFamily:"inherit"}}>
-                  {remaining}
-                </text>
-              </g>
-            </svg>
-            <div style={{fontSize:12,color:"#bbb",marginBottom:22}}>seconds remaining</div>
-            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-              {!done && <button onClick={()=>setRunning(r=>!r)} style={{padding:"8px 16px",fontSize:14,borderRadius:10,border:"1px solid #ddd",background:"#f5f5f5",color:"#555",fontWeight:500,cursor:"pointer"}}>{running?"Pause":"Resume"}</button>}
-              <button onClick={restart} style={{padding:"8px 16px",fontSize:14,borderRadius:10,border:"1px solid #ddd",background:"#f5f5f5",color:"#555",fontWeight:500,cursor:"pointer"}}>↺ Restart</button>
-              <button onClick={onClose} style={{padding:"8px 16px",fontSize:14,borderRadius:10,border:"none",background:done?"#E1F5EE":"#EEEDFE",color:done?"#0F6E56":"#534AB7",fontWeight:700,cursor:"pointer"}}>{done?"Done":"Skip"}</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function GymTracker() {
-      const [week, setWeek] = useState("A");
-      const [dayIdx, setDayIdx] = useState(0);
-      const [warmupOpen, setWarmupOpen] = useState(false);
-      const [openGuides, setOpenGuides] = useState({});
-      const [openLog, setOpenLog] = useState({});
-      const [log, setLog] = useState({});
-      const [draft, setDraft] = useState({});
-      const [editSess, setEditSess] = useState({});
-      const [timer, setTimer] = useState(null);
-
-      // Load from localStorage
-      useEffect(() => {
-        try {
-          const saved = localStorage.getItem("gym_log_v2");
-          if (saved) setLog(JSON.parse(saved));
-        } catch (err) {
-          console.warn("Load failed:", err);
-        }
-      }, []);
-
-      // Save to localStorage
-      useEffect(() => {
-        if (Object.keys(log).length > 0) {
-          try {
-            localStorage.setItem("gym_log_v2", JSON.stringify(log));
-          } catch (err) {
-            console.warn("Save failed:", err);
-          }
-        }
-      }, [log]);
-
-      const day = DAYS[dayIdx], plan = day[week], warmup = WARMUPS[dayIdx];
-      const wc = week==="A" ? {bg:"#EEEDFE",text:"#534AB7"} : {bg:"#E1F5EE",text:"#0F6E56"};
-
-      const toggleGuide = k => setOpenGuides(p=>({...p,[k]:!p[k]}));
-      const toggleLog = (k,ex) => {
-        const o = !openLog[k]; setOpenLog(p=>({...p,[k]:o}));
-        if(o && !draft[k]){const n=parseSetCount(ex.sets); setDraft(p=>({...p,[k]:{sets:emptyRows(n),customCount:n,unit:"kg"}}));}
-      };
+  <script>
+    const app = {
+      week: 'A',
+      dayIdx: 0,
+      log: {},
+      openGuides: {},
+      openLogs: {},
+      openWarmup: false,
       
-      const updateSet = (k,si,f,v) => setDraft(p=>{
-        const d=p[k]||{sets:[],customCount:0,unit:"kg"};
-        return{...p,[k]:{...d,sets:d.sets.map((s,i)=>i===si?{...s,[f]:v}:s)}};
-      });
-
-      const changeCount = (k,delta,ex) => setDraft(p=>{
-        const d=p[k]||{sets:emptyRows(parseSetCount(ex.sets)),customCount:parseSetCount(ex.sets),unit:"kg"};
-        const n=Math.max(1,(d.customCount||d.sets.length)+delta);
-        let sets=[...d.sets];
-        if(n>sets.length) while(sets.length<n) sets.push({weight:"",reps:""});
-        else sets=sets.slice(0,n);
-        return{...p,[k]:{...d,sets,customCount:n}};
-      });
-
-      const submit = k => {
-        const d=draft[k]; 
-        if(!d||!d.sets.some(s=>s.weight||s.reps)) return;
-        const entry={date:new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short"}),sets:d.sets.map(s=>({weight:s.weight,reps:s.reps})),notes:d.notes||"",unit:d.unit||"kg"};
-        setLog(prev=>{const u=[entry,...(prev[k]||[])].slice(0,5);return{...prev,[k]:u};});
-        setDraft(p=>({...p,[k]:{...d,sets:emptyRows(d.customCount||d.sets.length)}}));
-      };
-
-      const startEdit = (k,si,session) => {
-        setEditSess(p=>({...p,[k]:si}));
-        setDraft(p=>({...p,[k]:{sets:session.sets.map(s=>({weight:s.weight||"",reps:s.reps||""})),customCount:session.sets.length,notes:session.notes||"",unit:session.unit||"kg"}}));
-      };
-
-      const saveEdit = (k,si) => {
-        const d=draft[k]; 
-        if(!d) return;
-        setLog(prev=>{
-          const arr=[...(prev[k]||[])];
-          arr[si]={...arr[si],sets:d.sets.map(s=>({weight:s.weight,reps:s.reps})),notes:d.notes||"",unit:d.unit||"kg"};
-          return{...prev,[k]:arr};
-        });
-        setEditSess(p=>({...p,[k]:null}));
-        setDraft(p=>({...p,[k]:{sets:emptyRows(d.customCount),customCount:d.customCount,notes:"",unit:d.unit||"kg"}}));
-      };
-
-      const cancelEdit = (k,ex) => {
-        setEditSess(p=>({...p,[k]:null}));
-        const n=parseSetCount(ex.sets); 
-        setDraft(p=>({...p,[k]:{sets:emptyRows(n),customCount:n,unit:"kg"}}));
-      };
-
-      function renderExercise(ex,fi,ei){
-        const k=logKey(week,dayIdx,fi,ei);
-        const guideOpen=openGuides[k], logOpen=openLog[k];
-        const history=log[k]||[];
-        const d=draft[k]||{sets:emptyRows(parseSetCount(ex.sets)),customCount:parseSetCount(ex.sets),unit:"kg"};
-        const editIdx=editSess[k]??null, isEditing=editIdx!==null;
-        const unit=d.unit||"kg";
-
-        return (
-          <div key={k} style={{padding:"13px 16px",borderBottom:"1px solid #f5f5f5"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:15,fontWeight:700,color:"#111",marginBottom:7}}>{ex.name}</div>
-                <div style={{marginBottom:5}}>
-                  <span style={pillStyle("#EAF3DE","#3B6D11")}>{ex.muscles}</span>
-                </div>
-                <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={pillStyle("#EEEBE6","#6B6560")}>{ex.eq}</span>
-                  <button onClick={()=>setTimer({seconds:ex.restSecs})}
-                    style={{...pillStyle("#E6F1FB","#185FA5"),border:"none",cursor:"pointer",fontFamily:"inherit"}}>
-                    ⏱ {ex.rest}
-                  </button>
-                </div>
-              </div>
-              <div style={{fontSize:13,color:"#666",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>{ex.sets}</div>
+      init() {
+        this.loadLog();
+        this.render();
+      },
+      
+      loadLog() {
+        try {
+          const saved = localStorage.getItem('gym_log_v2');
+          if (saved) this.log = JSON.parse(saved);
+        } catch (err) {
+          console.warn('Load failed:', err);
+        }
+      },
+      
+      saveLog() {
+        try {
+          localStorage.setItem('gym_log_v2', JSON.stringify(this.log));
+        } catch (err) {
+          console.warn('Save failed:', err);
+        }
+      },
+      
+      getPlan() {
+        const plans = {
+          '0A': { title: 'Upper body — push', tip: 'Stay in equipment area, then one quick move to open room for the finisher. Rest 60s on compounds, 45s on isolation.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Bench press machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Chest, front delts, triceps', eq: 'Machine', guide: ['Adjust seat so handles align with mid-chest.', 'Press forward until arms extended but not locked out.', 'Control the return — don\'t let the weight stack slam.'] },
+                { name: 'Incline bench press machine', sets: '3 × 12', rest: '60 s', restSecs: 60, muscles: 'Upper chest, front delts, triceps', eq: 'Machine', guide: ['Adjust seat so handles align with upper chest.', 'Press up and slightly forward, squeeze at the top.', 'Lower slowly, feeling the stretch in upper chest.'] },
+                { name: 'Seated chest fly machine', sets: '3 × 12', rest: '45 s', restSecs: 45, muscles: 'Chest, front delts', eq: 'Machine', guide: ['Adjust seat so handles are at chest height.', 'Bring handles together in front of chest, squeezing hard.', 'Open slowly, controlling the stretch.'] },
+                { name: 'Cable tricep pushdown', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Triceps', eq: 'Cable', guide: ['High pulley, straight or rope attachment. Elbows pinned to sides.', 'Push down until arms extended, squeeze triceps.', 'Control the return — don\'t let elbows flare.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell lateral raise', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Side delts', eq: 'DB', guide: ['Slight forward lean, soft knees.', 'Raise arms to shoulder height, leading with elbows.', 'Lower slowly. Go lighter than you think.'] },
+                { name: 'Dumbbell overhead press', sets: '3 × 12', rest: '60 s', restSecs: 60, muscles: 'Shoulders, triceps, upper traps', eq: 'DB', guide: ['Seated or standing. DBs at shoulder height.', 'Press up, bringing DBs slightly together at top.', 'Core braced — don\'t arch lower back.'] },
+              ]},
+            ]
+          },
+          '0B': { title: 'Upper body — push', tip: 'Stay in equipment area, then one quick move to open room for the finisher.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Incline bench press machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Upper chest, front delts, triceps', eq: 'Machine', guide: ['Adjust seat so handles align with upper chest.', 'Press up and slightly forward, squeeze at the top.', 'Lower slowly, feeling the stretch in upper chest.'] },
+                { name: 'Bench press machine', sets: '3 × 12', rest: '60 s', restSecs: 60, muscles: 'Chest, front delts, triceps', eq: 'Machine', guide: ['Adjust seat so handles align with mid-chest.', 'Press forward until arms extended but not locked out.', 'Control the return — don\'t let the weight stack slam.'] },
+                { name: 'Seated chest fly machine', sets: '3 × 12', rest: '45 s', restSecs: 45, muscles: 'Chest, front delts', eq: 'Machine', guide: ['Same as Week A — focus on a slow eccentric this week.', 'Bring handles together in front of chest, squeezing hard.', 'Open slowly over 3 seconds, controlling the stretch.'] },
+                { name: 'Cable overhead tricep extension', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Triceps (long head)', eq: 'Cable', guide: ['Low pulley, rope attachment. Face away, rope overhead.', 'Extend arms forward and up, squeezing triceps.', 'Keep upper arms still — only the forearms move.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell front raise', sets: '3 × 12', rest: '45 s', restSecs: 45, muscles: 'Front delts', eq: 'DB', guide: ['Alternate arms. Raising to shoulder height.', 'Slight elbow bend. Don\'t swing.', 'Lower slowly — the eccentric phase matters.'] },
+                { name: 'Dumbbell Arnold press', sets: '3 × 12', rest: '60 s', restSecs: 60, muscles: 'Shoulders (all heads), triceps', eq: 'DB', guide: ['Start with DBs at chin, palms facing you.', 'Rotate palms outward as you press up.', 'Reverse rotation on the way down. Go slowly.'] },
+              ]},
+            ]
+          },
+          '1A': { title: 'Lower body — quad focus', tip: 'Start at the squat rack, finish quads on machines.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Barbell back squat', sets: '4 × 10', rest: '90 s', restSecs: 90, muscles: 'Quads, glutes, hamstrings, core', eq: 'Squat rack', guide: ['Bar on upper traps, feet shoulder-width, toes slightly out.', 'Brace core, squat until thighs parallel to floor.', 'Drive through heels to stand. Chest up, knees track over toes.'] },
+                { name: 'Leg press', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Quads, glutes, hamstrings', eq: 'Machine', guide: ['Feet shoulder-width, mid-plate. Lower until knees ~90°.', 'Don\'t let lower back peel off the pad.', 'Don\'t lock out knees at top. Keep tension throughout.'] },
+                { name: 'Leg extension machine', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Quads', eq: 'Machine', guide: ['Back flat against pad, pad resting on shins.', 'Extend legs until straight, squeeze quads hard.', 'Lower slowly — control the negative.'] },
+                { name: 'Calf raise machine', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Calves', eq: 'Machine', guide: ['Balls of feet on platform, full stretch at the bottom.', 'Push up onto toes, pause and squeeze at the top.', 'Lower slowly past parallel for a deep stretch.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Curtsy lunge', sets: '3 × 12/leg', rest: '60 s', restSecs: 60, muscles: 'Glutes, inner thighs, quads', eq: 'DB', guide: ['Hold DBs at sides. Step one leg diagonally behind you, crossing it behind the standing leg.', 'Lower back knee toward the floor, keeping front knee tracking over toes.', 'Drive through the front heel to return to standing. Keep torso upright throughout.'] },
+              ]},
+            ]
+          },
+          '1B': { title: 'Lower body — quad focus', tip: 'Start at the squat rack, finish quads on machines.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Smith machine front squat', sets: '4 × 8', rest: '90 s', restSecs: 90, muscles: 'Quads (emphasis), core, upper back', eq: 'Smith machine', guide: ['Bar on front of shoulders, crossed arms or clean grip.', 'Stay very upright, squat deep, drive knees out.', 'Go lighter than you think — front squats are tough on the core.'] },
+                { name: 'Leg press — narrow stance', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Outer quads, glutes', eq: 'Machine', guide: ['Feet closer together, still mid-plate.', 'Narrower stance shifts emphasis to outer quad sweep.', 'Same rules as regular leg press.'] },
+                { name: 'Leg extension machine', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Quads', eq: 'Machine', guide: ['Same as Week A — this week, pause 2 seconds at the top of each rep.', 'Extend legs until straight, squeeze quads hard.', 'Lower slowly — control the negative.'] },
+                { name: 'Calf raise machine', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Calves', eq: 'Machine', guide: ['Same as Week A. Try a slightly wider foot stance for variation.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Curtsy lunge', sets: '3 × 12/leg', rest: '60 s', restSecs: 60, muscles: 'Glutes, inner thighs, quads', eq: 'DB', guide: ['Hold DBs at sides. Step one leg diagonally behind you.', 'Lower back knee toward the floor.', 'Drive through the front heel to return to standing.'] },
+              ]},
+            ]
+          },
+          '2A': { title: 'Upper body — pull', tip: 'Stay in equipment area for cables, one move to open room for curls.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Lat pulldown (wide grip)', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Lats, biceps, rear delts', eq: 'Cable', guide: ['Wide overhand grip. Pull bar to upper chest, lead with elbows.', 'Lean back slightly.', 'Let bar rise fully — lats stretch at the top.'] },
+                { name: 'Seated cable row', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Mid-back, lats, biceps', eq: 'Cable', guide: ['Sit upright, neutral grip. Row to lower sternum, elbows hugging sides.', 'Squeeze shoulder blades at end.', 'Extend arms fully on return.'] },
+                { name: 'Single-arm cable row', sets: '3 × 12/side', rest: '45 s', restSecs: 45, muscles: 'Lats, mid-back, biceps', eq: 'Cable', guide: ['Mid-height cable. Row elbow back past your hip.', 'Let torso rotate slightly toward cable at bottom for greater ROM.', 'Control the return fully.'] },
+                { name: 'Cable face pull', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Rear delts, rotator cuff, upper traps', eq: 'Cable', guide: ['High pulley, rope attachment. Pull to face, hands splitting at ear level.', 'Elbows finish above shoulder height.', 'Go light — this is a shoulder health exercise.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell bicep curl', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Biceps, forearms', eq: 'DB', guide: ['Alternate arms. Supinate wrist as you curl (rotate palm upward).', 'Full range — arm fully extended at start.', 'Lower slowly. No swinging.'] },
+              ]},
+            ]
+          },
+          '2B': { title: 'Upper body — pull', tip: 'Stay in equipment area for cables, one move to open room for curls.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Lat pulldown (close grip)', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Lats (inner), biceps', eq: 'Cable', guide: ['Neutral/close grip handle. Pull to chin level.', 'Close grip hits inner/lower lat differently to wide grip.', 'Same rules: lead with elbows, full stretch at top.'] },
+                { name: 'Seated cable row — wide grip', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Upper back, rear delts, traps', eq: 'Cable', guide: ['Wide bar attachment. Row to lower chest. Elbows flare slightly.', 'Shifts work to upper back.', 'Squeeze hard at finish. Pause before releasing.'] },
+                { name: 'Cable straight-arm pulldown', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Lats', eq: 'Cable', guide: ['High pulley, straight bar. Stand back, arms extended above.', 'Pull bar down in an arc keeping arms straight to thighs.', 'Return slowly — the stretch is where lats grow.'] },
+                { name: 'Cable rear delt fly', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Rear delts, upper back', eq: 'Cable', guide: ['Two high cables, cross arms and grab opposite handle.', 'Pull outward and slightly down in a reverse fly motion.', 'Slight elbow bend. Squeeze rear delts at end.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell hammer curl', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Biceps, brachialis, forearms', eq: 'DB', guide: ['Neutral grip (palms facing each other) throughout.', 'Curl both arms or alternate. Lower all the way down each rep.', 'Full extension matters.'] },
+              ]},
+            ]
+          },
+          '3A': { title: 'Lower body — glute & hamstring focus', tip: 'Equipment area for hip thrust and leg curl, one move to open room for the finisher.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Hip thrust machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Glutes (primary), hamstrings', eq: 'Machine', guide: ['Adjust pad to sit comfortably across hips.', 'Drive hips up explosively, squeeze glutes hard at the top.', 'Lower with control — don\'t let the weight drop.'] },
+                { name: 'Leg curl machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Hamstrings', eq: 'Machine', guide: ['Lie face down or seated, pad against lower legs.', 'Curl legs up, squeezing hamstrings hard at the top.', 'Lower slowly — control the negative.'] },
+                { name: 'Cable kickback', sets: '3 × 15/leg', rest: '45 s', restSecs: 45, muscles: 'Glutes', eq: 'Cable', guide: ['Ankle attachment, low pulley. Hinge slightly forward, hold machine for support.', 'Kick attached leg straight back, squeezing glute hard at top.', 'Don\'t swing — small and controlled. Isolation, not momentum.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Kettlebell swing', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Glutes, hamstrings, core', eq: 'Kettlebell', guide: ['Hinge at hips, kettlebell swings between legs.', 'Drive hips forward explosively, swinging KB to chest height.', 'Let it swing back down naturally into the next rep — hips power the movement, not arms.'] },
+              ]},
+            ]
+          },
+          '3B': { title: 'Lower body — glute & hamstring focus', tip: 'Equipment area for hip thrust and leg curl, one move to open room for the finisher.',
+            sections: [
+              { name: 'Equipment area', exercises: [
+                { name: 'Hip thrust machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Glutes (primary), hamstrings', eq: 'Machine', guide: ['Same as Week A — pause 1 second at the top of each rep this week.', 'Drive hips up explosively, squeeze glutes hard at the top.', 'Lower with control — don\'t let the weight drop.'] },
+                { name: 'Leg curl machine', sets: '4 × 12', rest: '60 s', restSecs: 60, muscles: 'Hamstrings', eq: 'Machine', guide: ['Same as Week A — focus on a slow 3-second eccentric this week.', 'Curl legs up, squeezing hamstrings hard at the top.', 'Lower slowly — control the negative.'] },
+                { name: 'Cable kickback', sets: '3 × 15/leg', rest: '45 s', restSecs: 45, muscles: 'Glutes', eq: 'Cable', guide: ['Same as Week A. Try pausing briefly at full extension.'] },
+              ]},
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell Bulgarian split squat', sets: '3 × 10/leg', rest: '75 s', restSecs: 75, muscles: 'Glutes, quads, hamstrings', eq: 'DB + chair', guide: ['Rear foot elevated on a chair, laces down. Hold DBs at sides.', 'Lower back knee toward floor. Lean forward slightly at hips.', 'Drive through front heel to stand. This will burn — that\'s good.'] },
+              ]},
+            ]
+          },
+          '4A': { title: 'Full body — metabolic', tip: 'Start in open room for DB/KB work, one move to equipment for the finisher. Keep rest to 30–45s today.',
+            sections: [
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell thrusters', sets: '4 × 15', rest: '45 s', restSecs: 45, muscles: 'Quads, glutes, shoulders, triceps', eq: 'DB', guide: ['Hold DBs at shoulder height. Squat down (full depth).', 'As you stand, press DBs overhead in one fluid motion. Power from the legs.', 'Lower DBs back to shoulders as you descend into next squat.'] },
+                { name: 'Kettlebell swing to squat', sets: '3 × 12', rest: '45 s', restSecs: 45, muscles: 'Full body — glutes, hamstrings, core', eq: 'Kettlebell', guide: ['Swing kettlebell up to chest height using hip drive.', 'As it descends, drop into a squat holding KB at chest.', 'Stand and repeat the swing for the next rep.'] },
+                { name: 'Dumbbell renegade row', sets: '3 × 10/side', rest: '45 s', restSecs: 45, muscles: 'Back, biceps, core (anti-rotation)', eq: 'DB', guide: ['Plank position, one hand on each DB. Feet wide for stability.', 'Row one DB to your hip while the other arm stays planted.', 'Don\'t rotate your hips — staying still is the core challenge.'] },
+              ]},
+              { name: 'Equipment area', exercises: [
+                { name: 'Cable woodchop (high to low)', sets: '3 × 12/side', rest: '30 s', restSecs: 30, muscles: 'Obliques, core, shoulders', eq: 'Cable', guide: ['High pulley, single handle, stand side-on.', 'Pull handle diagonally across body from high to low, rotating through torso.', 'Arms relatively straight — rotation comes from core, not arms.'] },
+                { name: 'Leg press — light, fast', sets: '3 × 20', rest: '45 s', restSecs: 45, muscles: 'Quads, glutes', eq: 'Machine', guide: ['Light weight, 20 reps, explosive push, slow lower.', 'About 60% of your normal leg press weight.', 'Embrace the burn — this is a metabolic finisher.'] },
+              ]},
+            ]
+          },
+          '4B': { title: 'Full body — metabolic', tip: 'Start in open room for DB/KB work, one move to equipment for the finisher.',
+            sections: [
+              { name: 'Open room', exercises: [
+                { name: 'Dumbbell clean and press', sets: '4 × 10', rest: '45 s', restSecs: 45, muscles: 'Full body — power movement', eq: 'DB', guide: ['Hold DBs at thighs. Explosively pull to shoulder height, then press overhead.', 'Two phases: the clean (to shoulders) and the press (overhead).', 'Lower with control — keep form clean as you fatigue.'] },
+                { name: 'Kettlebell swing', sets: '3 × 15', rest: '45 s', restSecs: 45, muscles: 'Glutes, hamstrings, core', eq: 'Kettlebell', guide: ['Hinge at hips, kettlebell swings between legs.', 'Drive hips forward explosively, swinging KB to chest height.', 'Let it swing back down naturally into the next rep.'] },
+                { name: 'Dumbbell step-up to press', sets: '3 × 10/leg', rest: '45 s', restSecs: 45, muscles: 'Quads, glutes, shoulders', eq: 'DB + chair', guide: ['One foot on a stable chair or step. Drive up through that heel.', 'At the top, press both DBs overhead.', 'Lower DBs as you step back down. Finish the press before stepping down.'] },
+              ]},
+              { name: 'Equipment area', exercises: [
+                { name: 'Cable pallof press', sets: '3 × 12/side', rest: '30 s', restSecs: 30, muscles: 'Core (anti-rotation), obliques', eq: 'Cable', guide: ['Mid-height cable, single handle. Stand side-on, feet shoulder-width.', 'Press handle straight out — cable tries to pull you toward it. Resist that.', 'Hold for a beat fully extended, return to chest. Zero torso rotation.'] },
+                { name: 'Leg press — light, fast', sets: '3 × 20', rest: '45 s', restSecs: 45, muscles: 'Quads, glutes', eq: 'Machine', guide: ['Same as Week A. Try a slightly different foot position.'] },
+              ]},
+            ]
+          },
+        };
+        return plans[`${this.dayIdx}${this.week}`];
+      },
+      
+      getWarmup() {
+        const warmups = [
+          { exercises: [
+            { name: 'Arm circles', duration: '30 s each direction', cue: 'Big slow circles, gradually increase range. Loosens shoulder capsule.' },
+            { name: 'Chest opener', duration: '30 s', cue: 'Arms wide, squeeze shoulder blades together. Opens the chest and front delts.' },
+            { name: 'Wall shoulder slides (YTWL)', duration: '45 s', cue: 'Back flat on wall, slide arms up and down. Activates rotator cuff before pressing.' },
+            { name: 'Push-up to downward dog', duration: '45 s', cue: 'Flow between a push-up and a pike stretch. Wakes up chest, triceps, and shoulders.' },
+            { name: 'Wrist circles + flexor stretch', duration: '30 s', cue: 'Essential before any pressing. Rotate slowly both ways, then hold a gentle stretch.' },
+          ]},
+          { exercises: [
+            { name: 'Hip circles', duration: '30 s each direction', cue: 'Hands on hips, big slow circles. Lubricates the hip joint before squatting.' },
+            { name: 'Bodyweight squat to pause', duration: '45 s', cue: 'Squat slowly, pause 2s at the bottom. Warms up quads, glutes, and ankles.' },
+            { name: 'Leg swings (front-back)', duration: '20 reps each leg', cue: 'Hold a wall, swing straight leg. Mobilises the hip flexor and hamstring.' },
+            { name: 'Lateral leg swings', duration: '20 reps each leg', cue: 'Swing leg side to side. Opens up the inner thigh and hip abductors.' },
+            { name: 'Ankle circles + calf raise', duration: '30 s', cue: 'Rotate ankles slowly, then 10 slow calf raises. Prepares ankles for loaded squats.' },
+          ]},
+          { exercises: [
+            { name: 'Cat-cow', duration: '45 s', cue: 'On all fours, arch and round your spine slowly. Mobilises the thoracic spine — key for rows.' },
+            { name: 'Band pull-apart', duration: '30 s', cue: 'Arms extended, pull hands apart squeezing rear delts. Direct warm-up for pulling muscles.' },
+            { name: 'Scapular retractions', duration: '20 reps', cue: 'Arms at sides, squeeze and release shoulder blades. Activates the mid-back before pulling.' },
+            { name: 'Bicep stretch on rack', duration: '30 s each arm', cue: 'Extend arm back on a rack, gentle stretch. Preps the bicep tendon for heavy pulling.' },
+            { name: 'Overhead lat stretch', duration: '30 s each side', cue: 'Reach one arm overhead and lean. Stretches the lat through full ROM before pulldowns.' },
+          ]},
+          { exercises: [
+            { name: 'Glute bridge hold', duration: '3 × 10 s hold', cue: 'Feet flat, drive hips up and squeeze hard at the top. Fires up glutes before heavier work.' },
+            { name: 'Hip flexor lunge stretch', duration: '30 s each side', cue: 'Low lunge, back knee down. Opens the hip flexor — crucial for hip thrust range.' },
+            { name: 'Leg swings (front-back)', duration: '20 reps each leg', cue: 'Big pendulum swings. Warms hamstrings and primes the hip hinge pattern.' },
+            { name: 'Hip hinge drill (no weight)', duration: '10 reps', cue: 'Hands on thighs, hinge back feeling the hamstring stretch. Practise before loading it.' },
+            { name: 'Clamshells', duration: '20 reps each side', cue: 'Activates the glute medius — stabilises your hips throughout the whole session.' },
+          ]},
+          { exercises: [
+            { name: 'Jumping jacks', duration: '45 s', cue: 'Elevates heart rate immediately. This is your cardio day — start warm.' },
+            { name: 'Bodyweight squat to press', duration: '30 s', cue: 'Squat, then drive arms overhead as you stand. Mimics the thruster pattern loaded.' },
+            { name: 'Inchworm', duration: '6 reps', cue: 'Walk hands out to a plank and back. Mobilises the whole posterior chain and shoulders.' },
+            { name: 'Hip circles + torso rotation', duration: '30 s', cue: 'Rotate hips and then torso in big circles. Preps the core for rotational work.' },
+            { name: 'High knees', duration: '30 s', cue: 'Keep it brisk. You want to feel slightly warm before the first set.' },
+          ]},
+        ];
+        return warmups[this.dayIdx];
+      },
+      
+      render() {
+        const root = document.getElementById('root');
+        const plan = this.getPlan();
+        const warmup = this.getWarmup();
+        
+        let html = `
+          <div class="controls">
+            <div class="btn-group">
+              <button class="${this.week === 'A' ? 'active' : ''}" onclick="app.setWeek('A')">Week A</button>
+              <button class="${this.week === 'B' ? 'active' : ''}" onclick="app.setWeek('B')">Week B</button>
             </div>
-
-            <div style={{display:"flex",gap:14,marginTop:10}}>
-              <button onClick={()=>toggleGuide(k)} style={{fontSize:13,color:"#4a7fcb",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:500}}>
-                {guideOpen?"Hide guide ↑":"How to do it ↓"}
-              </button>
-              <button onClick={()=>toggleLog(k,ex)} style={{fontSize:13,color:history.length>0?"#0F6E56":"#aaa",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:500}}>
-                {logOpen?"Hide log ↑":`Log sets${history.length>0?` (${history.length})`:""} ↓`}
-              </button>
+            <div class="day-buttons">
+              ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, i) => `
+                <button class="${this.dayIdx === i ? 'active' : ''}" onclick="app.setDay(${i})">${day}</button>
+              `).join('')}
             </div>
-
-            {guideOpen && (
-              <div style={{marginTop:10,background:"#f9f9f9",borderRadius:10,padding:"11px 13px"}}>
-                {ex.guide.map((step,si)=>(
-                  <div key={si} style={{display:"flex",gap:8,marginBottom:si<ex.guide.length-1?6:0,fontSize:13,color:"#555",lineHeight:1.5}}>
-                    <span style={{fontWeight:700,color:"#333",minWidth:18}}>{si+1}.</span>
-                    <span>{step}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {logOpen && (
-              <div style={{marginTop:12}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:13,color:"#666",fontWeight:500}}>Sets</span>
-                    <button onClick={()=>changeCount(k,-1,ex)} style={{width:28,height:28,border:"1px solid #ddd",borderRadius:8,background:"#f5f5f5",cursor:"pointer",fontSize:16}}>−</button>
-                    <span style={{fontSize:14,fontWeight:700,minWidth:18,textAlign:"center",color:"#111"}}>{d.sets.length}</span>
-                    <button onClick={()=>changeCount(k,1,ex)} style={{width:28,height:28,border:"1px solid #ddd",borderRadius:8,background:"#f5f5f5",cursor:"pointer",fontSize:16}}>+</button>
-                  </div>
-                  <div style={{display:"flex",border:"1px solid #e0e0e0",borderRadius:8,overflow:"hidden"}}>
-                    {["kg","lbs"].map(u=>(
-                      <button key={u} onClick={()=>setDraft(p=>({...p,[k]:{...(p[k]||d),unit:u}}))}
-                        style={{padding:"4px 10px",fontSize:11,border:"none",cursor:"pointer",fontWeight:unit===u?600:400,
-                          background:unit===u?"#F1EFE8":"transparent",color:unit===u?"#5F5E5A":"#999"}}>{u}</button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{display:"grid",gridTemplateColumns:"52px 1fr 1fr",gap:8,marginBottom:5}}>
-                  <div style={{fontSize:11,color:"#bbb",fontWeight:500}}></div>
-                  <div style={{fontSize:11,color:"#bbb",fontWeight:500}}>Weight ({unit})</div>
-                  <div style={{fontSize:11,color:"#bbb",fontWeight:500}}>Reps</div>
-                </div>
-
-                {d.sets.map((s,si)=>(
-                  <div key={si} style={{display:"grid",gridTemplateColumns:"52px 1fr 1fr",gap:8,alignItems:"center",marginBottom:6}}>
-                    <span style={{fontSize:13,color:"#999",fontWeight:500}}>Set {si+1}</span>
-                    <input type="text" inputMode="decimal" placeholder="—" defaultValue={s.weight}
-                      onBlur={e=>updateSet(k,si,"weight",e.target.value)}
-                      style={{width:"100%",fontSize:14,padding:"8px 10px",border:"1px solid #e0e0e0",borderRadius:10,outline:"none",background:"#fafafa",color:"#111",textAlign:"center"}}/>
-                    <input type="text" inputMode="numeric" placeholder="—" defaultValue={s.reps}
-                      onBlur={e=>updateSet(k,si,"reps",e.target.value)}
-                      style={{width:"100%",fontSize:14,padding:"8px 10px",border:"1px solid #e0e0e0",borderRadius:10,outline:"none",background:"#fafafa",color:"#111",textAlign:"center"}}/>
-                  </div>
-                ))}
-
-                <div style={{marginTop:10}}>
-                  <div style={{fontSize:11,color:"#bbb",fontWeight:500,marginBottom:5}}>Exercise notes</div>
-                  <textarea placeholder="e.g. felt strong, grip slipping, increase weight next time..."
-                    defaultValue={d.notes||""}
-                    key={k+"_notes_"+(editSess[k]??'new')}
-                    onBlur={e=>setDraft(p=>({...p,[k]:{...(p[k]||{}),notes:e.target.value}}))}
-                    style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1px solid #e0e0e0",borderRadius:10,outline:"none",background:"#fafafa",color:"#111",resize:"none",minHeight:60,fontFamily:"inherit",lineHeight:1.5}}/>
-                </div>
-
-                {isEditing ? (
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    <button onClick={()=>saveEdit(k,editIdx)}
-                      style={{...pillStyle(wc.bg,wc.text),border:"none",cursor:"pointer",marginTop:10,fontFamily:"inherit"}}>
-                      Update session
-                    </button>
-                    <button onClick={()=>cancelEdit(k,ex)}
-                      style={{...pillStyle("#f5f5f5","#555"),border:"none",cursor:"pointer",marginTop:10,fontFamily:"inherit"}}>
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={()=>submit(k)}
-                    style={{...pillStyle(wc.bg,wc.text),border:"none",cursor:"pointer",marginTop:10,fontFamily:"inherit"}}>
-                    Save
-                  </button>
-                )}
-
-                {history.length>0 && (
-                  <div style={{marginTop:14}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#333",marginBottom:7}}>Previous sessions</div>
-                    {history.map((session,hi)=>(
-                      <div key={hi} style={{marginBottom:8,padding:"9px 11px",background:"#f9f9f9",borderRadius:10,border:"1px solid #eee"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                          <span style={{fontSize:12,fontWeight:700,color:"#555"}}>{session.date}</span>
-                          <button onClick={()=>startEdit(k,hi,session)} style={{fontSize:12,color:"#4a7fcb",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:500}}>Edit</button>
-                        </div>
-                        {session.sets.map((s,si)=>(
-                          <div key={si} style={{display:"flex",gap:12,fontSize:12,color:"#666",padding:"2px 0"}}>
-                            <span style={{color:"#bbb",minWidth:42}}>Set {si+1}</span>
-                            {s.weight && <span>{s.weight} {session.unit||"kg"}</span>}
-                            {s.reps && <span>{s.reps} reps</span>}
-                            {!s.weight && !s.reps && <span style={{color:"#ccc"}}>—</span>}
-                          </div>
-                        ))}
-                        {session.notes && <div style={{fontSize:12,color:"#aaa",fontStyle:"italic",marginTop:4,paddingTop:4,borderTop:"1px solid #f0f0f0"}}>📝 {session.notes}</div>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        );
-      }
-
-      return (
-        <div style={{fontFamily:"system-ui,sans-serif",padding:"0.5rem 0"}}>
-          {timer && <RestTimer seconds={timer.seconds} onClose={()=>setTimer(null)}/>}
-
-          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:0}}>
-            <div style={{display:"flex",border:"1px solid #e0e0e0",borderRadius:10,overflow:"hidden"}}>
-              {["A","B"].map(w=>(
-                <button key={w} onClick={()=>setWeek(w)} style={{flex:1,padding:"8px 0",fontSize:14,border:"none",cursor:"pointer",
-                  background:week===w?(w==="A"?"#EEEDFE":"#E1F5EE"):"transparent",
-                  color:week===w?(w==="A"?"#534AB7":"#0F6E56"):"#999",
-                  fontWeight:week===w?600:400}}>Week {w}</button>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:6,flexWrap:"nowrap",overflowX:"auto",paddingBottom:2}}>
-              {DAYS.map((d,i)=>(
-                <button key={i} onClick={()=>{setDayIdx(i);setWarmupOpen(false);}}
-                  style={{flexShrink:0,padding:"7px 16px",fontSize:13,border:`1px solid ${dayIdx===i?"#bbb":"#e0e0e0"}`,borderRadius:10,cursor:"pointer",
-                    background:dayIdx===i?"#f0f0f0":"transparent",color:dayIdx===i?"#111":"#999",fontWeight:dayIdx===i?600:400}}>
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{background:"#fff",border:"1px solid #e8e8e8",borderRadius:14,overflow:"hidden",marginTop:14}}>
-            <div style={{padding:"14px 16px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
-              <span style={{fontSize:17,fontWeight:700,color:"#111"}}>{day.title}</span>
-              <span style={{fontSize:13,color:"#999"}}>~45 min · Week {week}</span>
-            </div>
-            <div style={{padding:"11px 16px",borderBottom:"1px solid #f0f0f0",fontSize:13,lineHeight:1.5,color:"#444441",background:"#E5E2D9"}}>
-              {day.tip}
-            </div>
-
-            <div style={{borderBottom:"1px solid #f0f0f0"}}>
-              <button onClick={()=>setWarmupOpen(p=>!p)}
-                style={{width:"100%",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#FFF8F0",border:"none",cursor:"pointer"}}>
-                <span style={{fontSize:14,fontWeight:700,color:"#A0522D"}}>🔥 5-min Warmup</span>
-                <span style={{fontSize:13,color:"#A0522D",fontWeight:500}}>{warmupOpen?"Hide ↑":"Show ↓"}</span>
-              </button>
-              {warmupOpen && (
-                <div style={{padding:"4px 16px 12px"}}>
-                  {warmup.exercises.map((w,wi)=>(
-                    <div key={wi} style={{padding:"8px 0",borderBottom:wi<warmup.exercises.length-1?"1px solid #f5f5f5":"none"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,marginBottom:3}}>
-                        <span style={{fontSize:14,fontWeight:600,color:"#111"}}>{w.name}</span>
-                        <span style={{fontSize:11,color:"#A0522D",background:"#FFF8F0",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",fontWeight:500}}>{w.duration}</span>
-                      </div>
-                      <div style={{fontSize:12,color:"#777",lineHeight:1.5}}>{w.cue}</div>
+          
+          <div class="card">
+            <div class="card-header">${plan.title}</div>
+            <div class="card-subheader">${plan.tip}</div>
+            
+            <button class="warmup-btn" onclick="app.toggleWarmup()">
+              <span>🔥 5-min Warmup</span>
+              <span style="color: #A0522D; font-weight: 500;">${this.openWarmup ? 'Hide ↑' : 'Show ↓'}</span>
+            </button>
+            
+            ${this.openWarmup ? `
+              <div style="padding: 4px 16px 12px;">
+                ${warmup.exercises.map(w => `
+                  <div class="warmup-item">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 3px;">
+                      <div class="warmup-name">${w.name}</div>
+                      <span class="warmup-duration">${w.duration}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {plan.floors.map((floor,fi)=>(
-              <div key={fi}>
-                <div style={{padding:"7px 16px",fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:"#5F5E5A",background:"#F1EFE8",borderBottom:"1px solid #ece9e0",borderTop:"1px solid #ece9e0"}}>
-                  {floor.name}
-                </div>
-                {floor.exercises.map((ex,ei)=>renderExercise(ex,fi,ei))}
+                    <div class="warmup-cue">${w.cue}</div>
+                  </div>
+                `).join('')}
               </div>
-            ))}
+            ` : ''}
+            
+            ${plan.sections.map(section => `
+              <div class="section-header">${section.name}</div>
+              ${section.exercises.map((ex, i) => this.renderExercise(ex, section.name, i)).join('')}
+            `).join('')}
           </div>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<GymTracker />);
+        `;
+        
+        root.innerHTML = html;
+      },
+      
+      renderExercise(ex, sectionName, i) {
+        const key = `${this.week}_${this.dayIdx}_${sectionName}_${i}`;
+        const history = this.log[key] || [];
+        const showGuide = this.openGuides[key];
+        const showLog = this.openLogs[key];
+        
+        let html = `
+          <div class="exercise">
+            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-meta">
+              <span class="pill pill-muscle">${ex.muscles}</span>
+              <span class="pill pill-eq">${ex.eq}</span>
+              <button class="pill pill-rest" onclick="app.startTimer(${ex.restSecs})" style="border: none; cursor: pointer; font-family: inherit;">⏱ ${ex.rest}</button>
+              <span style="font-size: 13px; color: #666; font-weight: 500;">${ex.sets}</span>
+            </div>
+            <div class="actions">
+              <button class="action-btn" onclick="app.toggleGuide('${key}')">${showGuide ? 'Hide guide ↑' : 'How to do it ↓'}</button>
+              <button class="action-btn" onclick="app.toggleLog('${key}')" style="color: ${history.length > 0 ? '#0F6E56' : '#aaa'}">
+                ${showLog ? 'Hide log ↑' : `Log sets${history.length > 0 ? ` (${history.length})` : ''} ↓`}
+              </button>
+            </div>
+            
+            ${showGuide ? `
+              <div class="guide">
+                ${ex.guide.map((step, si) => `
+                  <div class="guide-step">
+                    <span style="font-weight: 700; color: #333; min-width: 18px;">${si + 1}.</span>
+                    <span>${step}</span>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+            
+            ${showLog ? `
+              <div class="log show">
+                <div style="font-size: 13px; color: #666; font-weight: 500; margin-bottom: 10px;">Sets: ${ex.sets}</div>
+                <div style="display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; margin-bottom: 5px;">
+                  <div style="font-size: 11px; color: #bbb; font-weight: 500;"></div>
+                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Weight (kg)</div>
+                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Reps</div>
+                </div>
+                ${[0,1,2,3].map(j => `
+                  <div class="set-inputs">
+                    <span style="font-size: 13px; color: #999; font-weight: 500;">Set ${j+1}</span>
+                    <input type="text" id="weight-${key}-${j}" placeholder="—">
+                    <input type="text" id="reps-${key}-${j}" placeholder="—">
+                  </div>
+                `).join('')}
+                <textarea id="notes-${key}" placeholder="e.g. felt strong, grip slipping..."></textarea>
+                <button class="save-btn" onclick="app.saveExercise('${key}')">Save</button>
+                ${history.length > 0 ? `
+                  <div class="history">
+                    <div class="history-title">Previous sessions</div>
+                    ${history.map((session, hi) => `
+                      <div class="history-entry">
+                        <div class="history-date">${session.date}</div>
+                        ${session.sets.map((s, si) => `
+                          <div class="history-set">
+                            <span style="color: #bbb; min-width: 42px;">Set ${si+1}</span>
+                            ${s.weight ? `<span>${s.weight} kg</span>` : ''}
+                            ${s.reps ? `<span>${s.reps} reps</span>` : ''}
+                          </div>
+                        `).join('')}
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+        
+        return html;
+      },
+      
+      setWeek(w) { this.week = w; this.render(); },
+      setDay(i) { this.dayIdx = i; this.render(); },
+      toggleWarmup() { this.openWarmup = !this.openWarmup; this.render(); },
+      toggleGuide(key) { this.openGuides[key] = !this.openGuides[key]; this.render(); },
+      toggleLog(key) { this.openLogs[key] = !this.openLogs[key]; this.render(); },
+      
+      saveExercise(key) {
+        const sets = [];
+        for (let i = 0; i < 4; i++) {
+          const w = document.getElementById(`weight-${key}-${i}`)?.value || '';
+          const r = document.getElementById(`reps-${key}-${i}`)?.value || '';
+          if (w || r) sets.push({ weight: w, reps: r });
+        }
+        
+        if (sets.length === 0) return;
+        
+        const notes = document.getElementById(`notes-${key}`)?.value || '';
+        const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        
+        if (!this.log[key]) this.log[key] = [];
+        this.log[key].unshift({ date, sets, notes });
+        this.log[key] = this.log[key].slice(0, 5);
+        
+        this.saveLog();
+        alert('Saved!');
+        this.render();
+      },
+      
+      startTimer(secs) {
+        alert(`Rest for ${secs} seconds`);
+      }
+    };
+    
+    app.init();
   </script>
-
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #fafafa;
-      font-family: system-ui, -apple-system, sans-serif;
-      padding: 16px;
-    }
-    #root { max-width: 600px; margin: 0 auto; }
-  </style>
 </body>
 </html>
