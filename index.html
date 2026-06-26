@@ -399,7 +399,7 @@
                       <div class="history-entry">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                           <div class="history-date">${session.date}</div>
-                          <button class="action-btn" onclick="app.editSession('${key}', ${hi}, '${JSON.stringify(session).replace(/'/g, "&#39;")}')" style="font-size: 12px;">Edit</button>
+                          <button class="action-btn" onclick="app.editSession('${key}', ${hi})" style="font-size: 12px;">Edit</button>
                         </div>
                         ${session.sets.map((s, si) => `
                           <div class="history-set">
@@ -459,31 +459,32 @@
         this.render();
       },
       
-      editSession(key, historyIdx, sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          if (!this.log[key]) this.log[key] = [];
-          
-          // Move to top and fill form
-          const edited = this.log[key].splice(historyIdx, 1)[0];
-          this.log[key].unshift(edited);
-          
-          // Fill in the form
-          setTimeout(() => {
-            for (let i = 0; i < edited.sets.length; i++) {
-              const wEl = document.getElementById(`weight-${key}-${i}`);
-              const rEl = document.getElementById(`reps-${key}-${i}`);
-              if (wEl) wEl.value = edited.sets[i].weight;
-              if (rEl) rEl.value = edited.sets[i].reps;
-            }
-            const notesEl = document.getElementById(`notes-${key}`);
-            if (notesEl) notesEl.value = edited.notes || '';
-          }, 0);
-          
-          this.saveLog();
-        } catch (err) {
-          console.warn('Edit failed:', err);
-        }
+      editSession(key, historyIdx) {
+        if (!this.log[key] || !this.log[key][historyIdx]) return;
+        
+        const session = this.log[key][historyIdx];
+        
+        // Set the unit
+        this.units[key] = session.unit || 'kg';
+        
+        // Move to top
+        const edited = this.log[key].splice(historyIdx, 1)[0];
+        this.log[key].unshift(edited);
+        
+        this.saveLog();
+        this.render();
+        
+        // Fill in the form after render
+        setTimeout(() => {
+          for (let i = 0; i < edited.sets.length; i++) {
+            const wEl = document.getElementById(`weight-${key}-${i}`);
+            const rEl = document.getElementById(`reps-${key}-${i}`);
+            if (wEl) wEl.value = edited.sets[i].weight || '';
+            if (rEl) rEl.value = edited.sets[i].reps || '';
+          }
+          const notesEl = document.getElementById(`notes-${key}`);
+          if (notesEl) notesEl.value = edited.notes || '';
+        }, 50);
       }
     };
     
