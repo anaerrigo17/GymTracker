@@ -87,6 +87,7 @@
       
       init() {
         this.loadLog();
+        this.units = {}; // Track selected units per exercise
         this.render();
       },
       
@@ -373,13 +374,13 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                   <div style="font-size: 13px; color: #666; font-weight: 500;">Sets: ${ex.sets}</div>
                   <div class="unit-toggle">
-                    <button class="${(this.log[key]?.[0]?.unit || 'kg') === 'kg' ? 'active' : ''}" onclick="app.setUnit('${key}', 'kg')">kg</button>
-                    <button class="${(this.log[key]?.[0]?.unit || 'kg') === 'lbs' ? 'active' : ''}" onclick="app.setUnit('${key}', 'lbs')">lbs</button>
+                    <button class="${(this.units[key] || 'kg') === 'kg' ? 'active' : ''}" onclick="app.setUnit('${key}', 'kg')">kg</button>
+                    <button class="${(this.units[key] || 'kg') === 'lbs' ? 'active' : ''}" onclick="app.setUnit('${key}', 'lbs')">lbs</button>
                   </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; margin-bottom: 5px;">
                   <div style="font-size: 11px; color: #bbb; font-weight: 500;"></div>
-                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Weight (${(this.log[key]?.[0]?.unit || 'kg')})</div>
+                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Weight (${(this.units[key] || 'kg')})</div>
                   <div style="font-size: 11px; color: #bbb; font-weight: 500;">Reps</div>
                 </div>
                 ${[0,1,2,3].map(j => `
@@ -438,9 +439,10 @@
         
         const notes = document.getElementById(`notes-${key}`)?.value || '';
         const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const unit = this.units[key] || 'kg';
         
         if (!this.log[key]) this.log[key] = [];
-        this.log[key].unshift({ date, sets, notes });
+        this.log[key].unshift({ date, sets, notes, unit });
         this.log[key] = this.log[key].slice(0, 5);
         
         this.saveLog();
@@ -453,11 +455,7 @@
       },
       
       setUnit(key, unit) {
-        if (!this.log[key]) this.log[key] = [];
-        this.log[key] = this.log[key].map((entry, i) => 
-          i === 0 ? { ...entry, unit } : entry
-        );
-        this.saveLog();
+        this.units[key] = unit;
         this.render();
       },
       
