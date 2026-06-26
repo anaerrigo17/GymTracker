@@ -48,10 +48,14 @@
     textarea { width: 100%; padding: 12px 10px; border: 1px solid #e0e0e0; border-radius: 10px; background: #fafafa; color: #111; font-family: inherit; font-size: 13px; min-height: 80px; margin-top: 10px; }
     
     @media (max-width: 600px) {
-      .set-inputs { grid-template-columns: 1fr; gap: 8px; }
+      .set-inputs { grid-template-columns: auto 1fr 1fr; gap: 8px; }
       .set-label { display: none; }
       input { padding: 14px 12px; font-size: 16px; }
     }
+    
+    .unit-toggle { display: flex; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+    .unit-toggle button { flex: 1; padding: 6px 10px; border: none; background: transparent; cursor: pointer; font-size: 11px; font-weight: 400; color: #999; }
+    .unit-toggle button.active { background: #F1EFE8; color: #5F5E5A; font-weight: 600; }
     
     .save-btn { background: #EEEDFE; color: #534AB7; border: none; margin-top: 10px; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; }
     
@@ -366,10 +370,16 @@
             
             ${showLog ? `
               <div class="log show">
-                <div style="font-size: 13px; color: #666; font-weight: 500; margin-bottom: 10px;">Sets: ${ex.sets}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <div style="font-size: 13px; color: #666; font-weight: 500;">Sets: ${ex.sets}</div>
+                  <div class="unit-toggle">
+                    <button class="${(this.log[key]?.[0]?.unit || 'kg') === 'kg' ? 'active' : ''}" onclick="app.setUnit('${key}', 'kg')">kg</button>
+                    <button class="${(this.log[key]?.[0]?.unit || 'kg') === 'lbs' ? 'active' : ''}" onclick="app.setUnit('${key}', 'lbs')">lbs</button>
+                  </div>
+                </div>
                 <div style="display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; margin-bottom: 5px;">
                   <div style="font-size: 11px; color: #bbb; font-weight: 500;"></div>
-                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Weight (kg)</div>
+                  <div style="font-size: 11px; color: #bbb; font-weight: 500;">Weight (${(this.log[key]?.[0]?.unit || 'kg')})</div>
                   <div style="font-size: 11px; color: #bbb; font-weight: 500;">Reps</div>
                 </div>
                 ${[0,1,2,3].map(j => `
@@ -386,14 +396,18 @@
                     <div class="history-title">Previous sessions</div>
                     ${history.map((session, hi) => `
                       <div class="history-entry">
-                        <div class="history-date">${session.date}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                          <div class="history-date">${session.date}</div>
+                          <button class="action-btn" onclick="app.editSession('${key}', ${hi}, '${JSON.stringify(session).replace(/'/g, "&#39;")}')" style="font-size: 12px;">Edit</button>
+                        </div>
                         ${session.sets.map((s, si) => `
                           <div class="history-set">
                             <span style="color: #bbb; min-width: 42px;">Set ${si+1}</span>
-                            ${s.weight ? `<span>${s.weight} kg</span>` : ''}
+                            ${s.weight ? `<span>${s.weight} ${session.unit || 'kg'}</span>` : ''}
                             ${s.reps ? `<span>${s.reps} reps</span>` : ''}
                           </div>
                         `).join('')}
+                        ${session.notes ? `<div style="font-size: 12px; color: #aaa; font-style: italic; margin-top: 4px; padding-top: 4px; border-top: 1px solid #f0f0f0;">📝 ${session.notes}</div>` : ''}
                       </div>
                     `).join('')}
                   </div>
@@ -436,6 +450,42 @@
       
       startTimer(secs) {
         alert(`Rest for ${secs} seconds`);
+      },
+      
+      setUnit(key, unit) {
+        if (!this.log[key]) this.log[key] = [];
+        this.log[key] = this.log[key].map((entry, i) => 
+          i === 0 ? { ...entry, unit } : entry
+        );
+        this.saveLog();
+        this.render();
+      },
+      
+      editSession(key, historyIdx, sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (!this.log[key]) this.log[key] = [];
+          
+          // Move to top and fill form
+          const edited = this.log[key].splice(historyIdx, 1)[0];
+          this.log[key].unshift(edited);
+          
+          // Fill in the form
+          setTimeout(() => {
+            for (let i = 0; i < edited.sets.length; i++) {
+              const wEl = document.getElementById(`weight-${key}-${i}`);
+              const rEl = document.getElementById(`reps-${key}-${i}`);
+              if (wEl) wEl.value = edited.sets[i].weight;
+              if (rEl) rEl.value = edited.sets[i].reps;
+            }
+            const notesEl = document.getElementById(`notes-${key}`);
+            if (notesEl) notesEl.value = edited.notes || '';
+          }, 0);
+          
+          this.saveLog();
+        } catch (err) {
+          console.warn('Edit failed:', err);
+        }
       }
     };
     
